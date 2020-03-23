@@ -63,10 +63,13 @@
 ; Toate coordonatele oferite in comentarii sau in fisierul constants.rkt, se refera la
 ; coltul din stanga sus ale obiectelor!
 
-(define-struct bird (x y y-speed))
-(define initial-bird (bird bird-x bird-initial-y initial-momentum))
+(define-struct bird (y y-speed))
+(define initial-bird (bird bird-initial-y 0))
 
-(define-struct state (bird ))
+(define-struct pipe (x gap))
+
+
+(define-struct state (bird score))
 
 ;TODO 1
 ; După ce definiți structurile lui (get-initial-state) și a păsării, introduceți în prima
@@ -75,9 +78,10 @@
 ; și x = bird-x.
 ; (get-initial-state) va fi o funcție care va returna starea inițială a jocului.
 (define (get-initial-state)
-  (state initial-bird))
+  (state initial-bird 0))
 
-get-initial-state
+(get-initial-state)
+
 
 ;TODO 8
 ; În starea jocului, trebuie să păstrăm informații despre pipes. Pe parcursul jocului,
@@ -107,30 +111,32 @@ get-initial-state
 ; pasărea, și un al doilea getter care extrage din structura pasăre
 ; y-ul curent pe care se află această.
 (define (get-bird state)
-  state)
+  (state-bird state))
 (define (get-bird-y bird)
-  bird)
+  (bird-y bird))
 
 ;TODO 3
 ; Trebuie să implementăm logică gravitației. next-state-bird va primi drept
 ; parametri o structură de tip pasăre, și gravitația(un număr real). Aceasta va adaugă
 ; vitezei pe y a păsării, gravitația.
-(define (next-state-bird bird gravity)
-  `codul-tau-aici)
+(define (next-state-bird birdie gravity)
+  (bird  (+ (bird-y-speed birdie) (bird-y birdie))
+               (+ gravity (bird-y-speed birdie)))
+  )
 
 ;TODO 4
 ; După aceasta, implementati un getter care extrage din structura voastră
 ; viteza pe y a păsării.
-(define (get-bird-v-y bird)
-  bird)
+(define (get-bird-v-y birdie)
+  (bird-y-speed birdie))
 
 ;TODO 6
 ; Dorim să existe un mod prin care să imprimăm păsării un impuls.
 ; Definiți funcția next-state-bird-onspace care va primi drept parametri
 ; o structură de tip pasăre, momentum(un număr real), și va schimbă viteza
 ; pe y a păsării cu acea valoare.
-(define (next-state-bird-onspace bird momentum)
-  `codul-tau-aici)
+(define (next-state-bird-onspace birdie momentum)
+  (bird [bird-y birdie] (* -1 momentum)))
 
 ; Change
 ; Change va fi responsabil de input-ul de la tastatură al jocului.
@@ -139,7 +145,9 @@ get-initial-state
 ; care am apăsat-o. Aceasta va imprimă păsării momentum-ul, apelând
 ; funcția next-state-bird-onspace. Pentru orice altă tasta, starea rămâne aceeași.
 (define (change current-state pressed-key)
-  current-state)
+  (cond [(key=? pressed-key " ")
+         (state (next-state-bird-onspace (state-bird current-state) initial-momentum) (state-score current-state))]
+        [else current-state]))
 
 ;TODO 9
 ; După ce ați definit structurile pentru mulțimea de pipes și pentru un singur pipe,
@@ -193,7 +201,7 @@ get-initial-state
 ;TODO 17
 ; Creați un getter ce va extrage scorul din starea jocului.
 (define (get-score state)
-  state)
+  state-score)
 
 ;TODO 19
 ; Vrem să creăm logica coliziunii cu pământul.
@@ -251,6 +259,9 @@ get-initial-state
 ; animație. Acesta va primi ca parametru o structură de tip stare, și va întoarce
 ; starea corespunzătoare următorului cadru.
 
+(define (next-state current-state)
+         (struct-copy state current-state [bird (next-state-bird (state-bird current-state) initial-gravity)]))
+
 ;TODO 5
 ; Trebuie să integrăm funcția implementată anterior, și anume next-state-bird,
 ; în next-state.
@@ -261,8 +272,8 @@ get-initial-state
 
 ;TODO 18
 ; Vrem ca next-state să incrementeze scorul cu 0.1 la fiecare cadru.
-(define (next-state state)
-  state)
+;(define (next-state state)
+;  state)
 
 ; draw-frame
 ; draw-frame va fi apelat de big-bang dupa fiecare apel la next-state, pentru a afisa cadrul curent.
@@ -289,7 +300,8 @@ get-initial-state
 	(apply text/font (~v (round x)) 24 "indigo" text-family))
 
 (define (draw-frame state)
-  initial-scene)
+    (let ([birdie (state-bird state)])
+    (place-image bird-image bird-x (bird-y birdie) (place-image ground-image 320 880 initial-scene))))
 
 ; Folosind `place-image/place-images` va poziționa pipe-urile pe scenă.
 (define (place-pipes pipes scene)
