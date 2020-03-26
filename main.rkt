@@ -66,10 +66,11 @@
 (define-struct bird (y y-speed))
 (define initial-bird (bird bird-initial-y 0))
 
-(define-struct pipe (x gap))
+(define-struct pipe (x y))
 
+random-threshold
 
-(define-struct state (bird score))
+(define-struct state (bird score pipes))
 
 ;TODO 1
 ; După ce definiți structurile lui (get-initial-state) și a păsării, introduceți în prima
@@ -78,7 +79,7 @@
 ; și x = bird-x.
 ; (get-initial-state) va fi o funcție care va returna starea inițială a jocului.
 (define (get-initial-state)
-  (state initial-bird 0))
+  (state initial-bird 0 '()))
 
 (get-initial-state)
 
@@ -146,7 +147,7 @@
 ; funcția next-state-bird-onspace. Pentru orice altă tasta, starea rămâne aceeași.
 (define (change current-state pressed-key)
   (cond [(key=? pressed-key " ")
-         (state (next-state-bird-onspace (state-bird current-state) initial-momentum) (state-score current-state))]
+         (state (next-state-bird-onspace (state-bird current-state) initial-momentum) (state-score current-state) (state-pipes current-state))]
         [else current-state]))
 
 ;TODO 9
@@ -154,12 +155,12 @@
 ; implementați getterul get-pipes, care va extrage din starea jocului mulțimea de pipes,
 ; sub formă de lista.
 (define (get-pipes state)
-  `(gol))
+  (state-pipes state))
 
 ;TODO 10
 ; Implementați get-pipe-x ce va extrage dintr-o singură structura de tip pipe, x-ul acesteia.
 (define(get-pipe-x pipe)
-  pipe)
+  (pipe-x pipe))
 
 ;TODO 11
 ; Trebuie să implementăm logica prin care se mișcă pipes.
@@ -167,8 +168,9 @@
 ; și scroll-speed(un număr real). Aceasta va adaugă x-ului fiecărui pipe
 ; scroll-speed-ul dat.
 (define (move-pipes pipes scroll-speed)
-  pipes)
-
+  (if (empty? pipes) '()
+  (if (pipe? pipes) (pipe (- scroll-speed (pipe-x pipes)) (pipe-y pipes))
+      (append (move-pipes (cdr pipes) scroll-speed) (pipe (- scroll-speed pipe-x (car pipes)) (pipe-y (car pipes)))))))
 ;TODO 12
 ; Vom implementa logica prin care pipe-urile vor fi șterse din stare. În momentul
 ; în care colțul din DREAPTA sus al unui pipe nu se mai află pe ecran, acesta trebuie
@@ -177,7 +179,8 @@
 ;
 ; Hint: cunoaștem lățimea unui pipe, pipe-width
 (define (clean-pipes pipes)
-  pipes)
+  (if (pipe? pipes) pipe
+  (if (and (< (length pipes) no-pipes) (> (length pipes) 0)) (if (> (car pipes) 0) pipes (clean-pipes (cdr pipes))) pipes)))
 
 
 ;TODO 13
@@ -187,7 +190,13 @@
 ; având x-ul egal cu pipe-width + pipe-gap + x-ul celui mai îndepărtat pipe, în raport
 ; cu pasărea.
 (define (add-more-pipes pipes)
-  pipes)
+  (if (empty? pipes) (append '() (pipe scene-width (+ added-number (random random-threshold))))
+  (if (pipe? pipes) (append pipes (pipe (+ pipe-gap (pipe-x (car pipes))) (+ added-number (random random-threshold))))
+      (if (< (length pipes)  no-pipes)
+          (append pipes (pipe (+ pipe-gap (pipe-x (car pipes))) (+ added-number (random random-threshold))))
+          pipes
+      ))
+  ))
 
 ;TODO 14
 ; Vrem ca toate funcțiile implementate anterior legate de pipes să fie apelate
@@ -196,24 +205,24 @@
 ; și va apela cele trei funcții implementate anterior, în această ordine:
 ; move-pipes, urmat de clean-pipes, urmat de add-more pipes.
 (define (next-state-pipes pipes scroll-speed)
-  pipes)
+  (add-more-pipes (clean-pipes (move-pipes pipes scroll-speed))))
 
 ;TODO 17
 ; Creați un getter ce va extrage scorul din starea jocului.
 (define (get-score state)
-  state-score)
+  state-score state)
 
 ;TODO 19
 ; Vrem să creăm logica coliziunii cu pământul.
 ; Implementati check-ground-collision, care va primi drept parametru
-; o structura de tip pasăre, și returnează true dacă aceasta are coliziune
+; o structura de tip pasăre, și returnează true dacă aceasta are coliziuneF
 ; cu pământul.
 ;
 ; Hint: știm înălțimea păsării, bird-height, și y-ul pământului, ground-y.
 ; Coliziunea ar presupune ca un colț inferior al păsării să aibă y-ul
 ; mai mare sau egal cu cel al pământului.
 (define (check-ground-collision bird)
- `codul-tau-aici)
+    (if (> (- (bird-y bird) bird-height) ground-y) #t #f))
 
 ; invalid-state?
 ; invalid-state? îi va spune lui big-bang dacă starea curentă mai este valida,
@@ -228,7 +237,7 @@
 ; Odată creată logică coliziunilor dintre pasăre și pipes, vrem să integrăm
 ; funcția nou implementată în invalid-state?.
 (define (invalid-state? state)
-  #f)
+  (check-ground-collision (state-bird state)))
 
 ;TODO 21
 ; Odată ce am creat pasărea, pipe-urile, scor-ul și coliziunea cu pământul,
@@ -260,7 +269,9 @@
 ; starea corespunzătoare următorului cadru.
 
 (define (next-state current-state)
-         (struct-copy state current-state [bird (next-state-bird (state-bird current-state) initial-gravity)]))
+         (struct-copy state current-state [bird (next-state-bird (state-bird current-state) initial-gravity)]
+                                           [score (state-score current-state)]
+                                           [pipes (next-state-pipes (state-pipes current-state) initial-scroll-speed)]))
 
 ;TODO 5
 ; Trebuie să integrăm funcția implementată anterior, și anume next-state-bird,
