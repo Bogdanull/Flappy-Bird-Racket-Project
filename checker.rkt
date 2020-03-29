@@ -34,7 +34,7 @@
 
 (define next-state-i (lambda (initial-state i) (repeater (lambda (state) (next-state state)) initial-state i)))
 
-;(disable-score)
+(disable-score)
 (disable-bonus)
 (make-predictive '(42))
 

@@ -7,6 +7,8 @@
 
 (require "abilities.rkt")
 (require "constants.rkt")
+(require "random.rkt")
+(make-predictive '(42))
 ;---------------------------------------checker_exports------------------------------------------------
 (provide next-state)
 (provide next-state-bird)
@@ -308,14 +310,16 @@
 ; pipes -> pipe-width si pipe-height
 (define bird-image (rectangle bird-width bird-height  "solid" "yellow"))
 (define ground-image (rectangle scene-width ground-height "solid" "brown"))
-(define initial-scene (empty-scene scene-width scene-height))
+(define initial-scene (rectangle scene-width scene-height "solid" "white"))
 (define pipe-image (rectangle pipe-width pipe-height "solid" "green"))
-(define gaurica (rectangle (+ pipe-width 10) pipe-self-gap "solid" "white"))
+(define gap (rectangle (+ 2 pipe-width) pipe-self-gap "solid" "white"))
 
 
 (define text-family (list "Gill Sans" 'swiss 'normal 'bold #f))
 (define (score-to-image x)
-	(apply text/font (~v (round x)) 24 "indigo" text-family))
+(if SHOW_SCORE
+	(apply text/font (~v (round x)) 24 "indigo" text-family)
+	empty-image))
 
 
 
@@ -329,7 +333,7 @@
 
 (define (place-pipes pipes scene)
 	(if (empty? pipes) scene
-            (place-image gaurica (+ (pipe-x (car pipes)) (quotient pipe-width 2)) (+ (pipe-y (car pipes)) (quotient pipe-self-gap 2))
+            (place-image gap (+ (pipe-x (car pipes)) (quotient pipe-width 2)) (+ (pipe-y (car pipes)) (quotient pipe-self-gap 2))
             (place-image pipe-image (+ (pipe-x (car pipes)) (quotient pipe-width 2)) 400 (place-pipes (cdr pipes) scene)))))
 
 ; Bonus
