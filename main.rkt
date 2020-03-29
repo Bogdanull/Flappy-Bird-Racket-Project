@@ -66,11 +66,9 @@
 (define-struct bird (y y-speed))
 (define initial-bird (bird bird-initial-y 0))
 
-(define-struct pipe (x y))
+(define-struct pipe (x y) #:transparent)
 
-random-threshold
-
-(define-struct state (bird score pipes))
+(define-struct state (bird score pipes) #:transparent)
 
 ;TODO 1
 ; După ce definiți structurile lui (get-initial-state) și a păsării, introduceți în prima
@@ -79,7 +77,7 @@ random-threshold
 ; și x = bird-x.
 ; (get-initial-state) va fi o funcție care va returna starea inițială a jocului.
 (define (get-initial-state)
-  (state initial-bird 0 '()))
+  (state initial-bird  0 (list (pipe scene-width (+ added-number (random random-threshold))))))
 
 (get-initial-state)
 
@@ -99,13 +97,7 @@ random-threshold
 ; Atenție! Recomandăm să păstrați în stare colțul din stânga sus al chenarului lipsa
 ; dintre cele 2 pipe-uri!
 
-;TODO 16
-; Vrem o modalitate de a păstra scorul jocului. După ce definiți structura
-; acestuia, adăugați scorul inițial, adică 0, în starea inițială a jocului.
-; Atenție get-initial-state trebuie sa fie o funcție
-; și trebuie apelată în restul codului.
-;(define (get-initial-state)
-;  `codul-tau-aici)
+
 
 ;TODO 2
 ; După aceasta, implementați un getter care extrage din structura voastră
@@ -168,9 +160,9 @@ random-threshold
 ; și scroll-speed(un număr real). Aceasta va adaugă x-ului fiecărui pipe
 ; scroll-speed-ul dat.
 (define (move-pipes pipes scroll-speed)
-  (if (empty? pipes) '()
-  (if (pipe? pipes) (pipe (- scroll-speed (pipe-x pipes)) (pipe-y pipes))
-      (append (move-pipes (cdr pipes) scroll-speed) (pipe (- scroll-speed pipe-x (car pipes)) (pipe-y (car pipes)))))))
+  (if (empty? pipes) pipes
+  (if (pipe? pipes)  (pipe (- (pipe-x pipes) scroll-speed) (pipe-y pipes))
+      (cons (pipe (- (pipe-x (car pipes)) scroll-speed) (pipe-y (car pipes))) (move-pipes (cdr pipes) scroll-speed)))))
 ;TODO 12
 ; Vom implementa logica prin care pipe-urile vor fi șterse din stare. În momentul
 ; în care colțul din DREAPTA sus al unui pipe nu se mai află pe ecran, acesta trebuie
@@ -178,10 +170,13 @@ random-threshold
 ; Funcția va primi drept parametru mulțimea pipe-urilor din stare.
 ;
 ; Hint: cunoaștem lățimea unui pipe, pipe-width
-(define (clean-pipes pipes)
-  (if (pipe? pipes) pipe
-  (if (and (< (length pipes) no-pipes) (> (length pipes) 0)) (if (> (car pipes) 0) pipes (clean-pipes (cdr pipes))) pipes)))
+;(define (clean-pipes pipes)
+;  (if (or (empty? pipes) (pipe? pipes)) pipes
+;  (if (pair? pipes) pipes 
+;  (if (> (length pipes) no-pipes) (if (> (pipe-x (car pipes)) 0) pipes (clean-pipes (cdr pipes))) pipes))))
 
+(define (clean-pipes pipes)
+  (filter (lambda (x) (> (+ (pipe-x x) pipe-width) 0)) pipes ))
 
 ;TODO 13
 ; Vrem să avem un stream continuu de pipe-uri.
@@ -190,13 +185,12 @@ random-threshold
 ; având x-ul egal cu pipe-width + pipe-gap + x-ul celui mai îndepărtat pipe, în raport
 ; cu pasărea.
 (define (add-more-pipes pipes)
-  (if (empty? pipes) (append '() (pipe scene-width (+ added-number (random random-threshold))))
-  (if (pipe? pipes) (append pipes (pipe (+ pipe-gap (pipe-x (car pipes))) (+ added-number (random random-threshold))))
+  (if (pipe? pipes) (list (pipe (+ pipe-width pipe-gap (pipe-x pipes)) (+ added-number (random random-threshold))) pipes)
       (if (< (length pipes)  no-pipes)
-          (append pipes (pipe (+ pipe-gap (pipe-x (car pipes))) (+ added-number (random random-threshold))))
+          (cons (pipe (+ pipe-width pipe-gap (pipe-x (car pipes))) (+ added-number (random random-threshold))) pipes)
           pipes
       ))
-  ))
+  )
 
 ;TODO 14
 ; Vrem ca toate funcțiile implementate anterior legate de pipes să fie apelate
@@ -222,7 +216,7 @@ random-threshold
 ; Coliziunea ar presupune ca un colț inferior al păsării să aibă y-ul
 ; mai mare sau egal cu cel al pământului.
 (define (check-ground-collision bird)
-    (if (> (- (bird-y bird) bird-height) ground-y) #t #f))
+    (if (> (+ (bird-y bird) bird-height) ground-y) #t #f))
 
 ; invalid-state?
 ; invalid-state? îi va spune lui big-bang dacă starea curentă mai este valida,
@@ -270,7 +264,7 @@ random-threshold
 
 (define (next-state current-state)
          (struct-copy state current-state [bird (next-state-bird (state-bird current-state) initial-gravity)]
-                                           [score (state-score current-state)]
+                                           [score (+ 0.1 (state-score current-state))]
                                            [pipes (next-state-pipes (state-pipes current-state) initial-scroll-speed)]))
 
 ;TODO 5
@@ -305,18 +299,28 @@ random-threshold
 (define bird-image (rectangle bird-width bird-height  "solid" "yellow"))
 (define ground-image (rectangle scene-width ground-height "solid" "brown"))
 (define initial-scene (empty-scene scene-width scene-height))
+(define pipe-image (rectangle pipe-width pipe-height "solid" "green"))
+(define gaurica (rectangle (+ pipe-width 10) pipe-self-gap "solid" "white"))
+
 
 (define text-family (list "Gill Sans" 'swiss 'normal 'bold #f))
 (define (score-to-image x)
 	(apply text/font (~v (round x)) 24 "indigo" text-family))
 
+
+
 (define (draw-frame state)
     (let ([birdie (state-bird state)])
-    (place-image bird-image bird-x (bird-y birdie) (place-image ground-image 320 880 initial-scene))))
+    (place-image bird-image (+ bird-x (quotient (image-width bird-image) 2))  (+ (bird-y birdie) (quotient (image-height bird-image) 2))
+                 (place-image ground-image (quotient scene-width 2) (+ ground-y (quotient ground-height 2))
+                              (place-image (score-to-image (state-score state)) text-x text-y (place-pipes (state-pipes state) initial-scene))))))
 
-; Folosind `place-image/place-images` va poziționa pipe-urile pe scenă.
+; Folosind `place-image/place-images` va poziționa pipe-urile pe scenă.;
+
 (define (place-pipes pipes scene)
-	'your-code-here)
+	(if (empty? pipes) scene
+            (place-image gaurica (+ (pipe-x (car pipes)) (quotient pipe-width 2)) (+ (pipe-y (car pipes)) (quotient pipe-self-gap 2))
+            (place-image pipe-image (+ (pipe-x (car pipes)) (quotient pipe-width 2)) 400 (place-pipes (cdr pipes) scene)))))
 
 ; Bonus
 ; Completați abilities.rkt mai întâi, aceste funcții căt, apoi legați
