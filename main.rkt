@@ -204,7 +204,7 @@
 ;TODO 17
 ; Creați un getter ce va extrage scorul din starea jocului.
 (define (get-score state)
-  state-score state)
+  (state-score state))
 
 ;TODO 19
 ; Vrem să creăm logica coliziunii cu pământul.
@@ -216,7 +216,7 @@
 ; Coliziunea ar presupune ca un colț inferior al păsării să aibă y-ul
 ; mai mare sau egal cu cel al pământului.
 (define (check-ground-collision bird)
-    (if (> (+ (bird-y bird) bird-height) ground-y) #t #f))
+    (if (< (+ (bird-y bird) bird-height) ground-y) #f #t))
 
 ; invalid-state?
 ; invalid-state? îi va spune lui big-bang dacă starea curentă mai este valida,
@@ -231,7 +231,7 @@
 ; Odată creată logică coliziunilor dintre pasăre și pipes, vrem să integrăm
 ; funcția nou implementată în invalid-state?.
 (define (invalid-state? state)
-  (check-ground-collision (state-bird state)))
+  (or (check-ground-collision (state-bird state))(check-pipe-collisions (state-bird state) (state-pipes state))))
 
 ;TODO 21
 ; Odată ce am creat pasărea, pipe-urile, scor-ul și coliziunea cu pământul,
@@ -247,8 +247,18 @@
 ; Hint: Vă puteți folosi de check-collision-rectangle, care va primi drept parametri
 ; colțul din stânga sus și cel din dreapta jos ale celor două dreptunghiuri
 ; pe care vrem să verificăm coliziunea.
+(define (pipe-collision bird)
+  (lambda (pipe) (or (check-collision-rectangles (make-posn bird-x (bird-y bird))
+                                                  (make-posn (+ bird-x bird-width)(+ bird-height (bird-y bird)))
+                                                  (make-posn (pipe-x pipe) 0)
+                                                  (make-posn (+ (pipe-x pipe) pipe-width) (pipe-y pipe)))
+                     (check-collision-rectangles (make-posn bird-x (bird-y bird))
+                                                  (make-posn (+ bird-x bird-width)(+ bird-height (bird-y bird)))
+                                                  (make-posn (pipe-x pipe) (+ pipe-self-gap (pipe-y pipe)))
+                                                  (make-posn (+ (pipe-x pipe) pipe-width) ground-y)))))
+
 (define (check-pipe-collisions bird pipes)
-  `codul-tau-aici)
+  (ormap (pipe-collision bird) pipes))
 
 (define (check-collision-rectangles A1 A2 B1 B2)
   (match-let ([(posn AX1 AY1) A1]
