@@ -1,5 +1,3 @@
-# tema-PP-1
-
 ### Functional programming homework in Racket
 
 Simple Flappy bird implementation as a proof on understanding 
